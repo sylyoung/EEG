@@ -127,3 +127,15 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+data/
+runs/
+results/
+MI_base
+2021-BCI-情感计算决赛本地调试框架
+*.log
+*.rar
+*.zip
+files/
+feature extraction/
