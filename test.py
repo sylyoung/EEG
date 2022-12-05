@@ -1,42 +1,38 @@
-from __future__ import print_function
-import numpy as np
 import torch
-import braindecode
-from torchvision.datasets import CIFAR100, CIFAR10
-from torch.utils.data import Dataset, DataLoader, random_split
+import numpy as np
+import sys
 import pandas as pd
-from main import similarity_score
 
-if __name__ == '__main__':
 
-    data = np.load('/Users/Riccardo/Workspace/HUST-BCI/repos/EEG/data/BNCI2014001_inter_feature0.npz')
-    lst = data.files
-    for item in lst:
-        print(item)
-        print(data[item].shape)
 
-    '''
-    criterion = torch.nn.CrossEntropyLoss()
+x1 = np.load('x1.npy')
+x2 = np.load('x2.npy')
 
-    fitted_loss = []
-    y = torch.Tensor([1]).to(torch.long)
-    outputs = torch.Tensor([[1, 1]])
-    loss = criterion(outputs, y)
-    print(loss.item())
-    '''
-    '''
+print(x1.shape)
+print(x2.shape)
 
-    train_data = CIFAR100(download=False, root="/mnt/data2/sylyoung/Image/CIFAR100/")
 
-    print(type(train_data))
 
-    b = []
-    for i in range(len(a)):
-        if i < 200:
-            print(a[i][1])
-        if i % 5 <= 3:
-            b.append(i)
-    o_d = torch.utils.data.dataset.Subset(train_data, b)
-    print(type(o_d))
-    print(len(o_d))
-    '''
+'''
+a = np.array([[74.618,75.069,74.618,74.792,73.021]
+,[86.042,85.347,85.556,84.167,86.007]
+,[80.347,80.,79.583,78.75,79.514]
+,[84.583,83.889,84.479,85.764,84.965]
+,[88.125,86.875,87.708,87.708,87.674]
+,[80.278,81.528,80.486,80.903,79.653]
+,[75.069,77.847,76.389,76.701,76.875]
+,[73.889,74.41,73.576,73.021,74.583]
+,[88.09,87.639,89.097,88.16,88.16,]
+,[85.556,87.083,86.215,85.903,86.563]])
+
+
+print(a)
+
+scores_arr = a
+
+print('all scores', scores_arr)
+print('all avgs', np.average(scores_arr, 1).round(3))
+print('sbj stds', np.std(scores_arr, 1).round(3))
+print('all avg', np.average(np.average(scores_arr, 0)).round(3))
+print('all std', np.std(np.average(scores_arr, 0)).round(3))
+'''

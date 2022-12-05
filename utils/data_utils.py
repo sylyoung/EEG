@@ -7,7 +7,7 @@ import moabb
 import mne
 import pickle
 
-from moabb.datasets import BNCI2014001, BNCI2014002, BNCI2014008, BNCI2014009, BNCI2015003, BNCI2015004, EPFLP300
+from moabb.datasets import BNCI2014001, BNCI2014002, BNCI2014008, BNCI2014009, BNCI2015003, BNCI2015004, EPFLP300, BNCI2014004, BNCI2015001
 from moabb.paradigms import MotorImagery, P300
 from scipy.stats import differential_entropy
 from scipy.signal import stft
@@ -35,7 +35,7 @@ def split_data(data, axis, times):
 def convert_label(labels, axis, threshold):
     # Converting labels to 0 or 1, based on a certain threshold
     label_01 = np.where(labels > threshold, 1, 0)
-    print(label_01)
+    #print(label_01)
     return label_01
 
 
@@ -724,12 +724,15 @@ def dataset_SEEDV_DE_to_file(data_folder, use_EA):
                 subject_data = EA(subject_data)
                 print('EA\'d')
 
+            '''
+            # DE feature extraction by Xueliang
             feature = []
             for i in range(subject_data.shape[0]):
                 data = de_feature_extractor(subject_data[i], fs=sample_freq, fStart=fStart, fEnd=fEnd, window=4, stftn=512)
                 feature.append(data)
             feature = np.concatenate(feature, axis=0)
             print('feature.shape, labels.shape:', feature.shape, subject_labels.shape)
+            '''
 
             '''
             # DE feature extraction
@@ -741,8 +744,9 @@ def dataset_SEEDV_DE_to_file(data_folder, use_EA):
             features = np.concatenate(features, axis=-1)
             print('DE feature shape:', features.shape, subject_labels.shape)  # (3394, 310) (3394,)
             '''
-
-            X.append(feature)
+            print(subject_data.shape, subject_labels.shape)
+            X.append(subject_data)
+            #X.append(feature)
             labels.append(subject_labels)
             subj_trials_num.append(len(subject_labels))
 
@@ -754,10 +758,10 @@ def dataset_SEEDV_DE_to_file(data_folder, use_EA):
     print(labels.shape)  # (152730,)
     print(subj_trials_num)  # 3394
     if use_EA:
-        np.save('./data/' + 'SEED-V' + '/X_DE_EA_4sec', X)
+        np.save('./data/' + 'SEED-V' + '/X_EA_4sec', X)
         np.save('./data/' + 'SEED-V' + '/labels_EA_4sec', labels)
     else:
-        np.save('./data/' + 'SEED-V' + '/X_DE_4sec', X)
+        np.save('./data/' + 'SEED-V' + '/X_4sec', X)
         np.save('./data/' + 'SEED-V' + '/labels_4sec', labels)
 
 
@@ -945,6 +949,14 @@ def dataset_to_file(dataset_name, data_save):
         dataset = BNCI2014002()
         paradigm = MotorImagery(n_classes=2)
         # (2240, 15, 2561) (2240,) 512Hz 14subjects * 2classes * (50+30)trials * 2sessions(not namely separately)
+    elif dataset_name == 'BNCI2014004':
+        dataset = BNCI2014004()
+        paradigm = MotorImagery(n_classes=2)
+        # (6520, 3, 1126) (6520,) 250Hz 9subjects * 2classes * (?)trials * 5sessions
+    elif dataset_name == 'BNCI2015001':
+        dataset = BNCI2015001()
+        paradigm = MotorImagery(n_classes=2)
+        # (5600, 13, 2561) (5600,) 512Hz 12subjects * 2 classes * (200 + 200 + (200 for Subj 8/9/10/11)) trials * (2/3)sessions
     elif dataset_name == 'MI1':
         info = None
         return info
@@ -957,15 +969,15 @@ def dataset_to_file(dataset_name, data_save):
     elif dataset_name == 'BNCI2014008':
         dataset = BNCI2014008()
         paradigm = P300()
-        # (33600, 8, 257) (33600,) 256Hz 8subjects 1session
+        # (33600, 8, 257) (33600,) 256Hz 8subjects 4200 trials * 1session
     elif dataset_name == 'BNCI2014009':
         dataset = BNCI2014009()
         paradigm = P300()
-        # (17280, 16, 206) (17280,) 256Hz 10subjects 3sessions
+        # (17280, 16, 206) (17280,) 256Hz 10subjects 1728 trials * 3sessions
     elif dataset_name == 'BNCI2015003':
         dataset = BNCI2015003()
         paradigm = P300()
-        # (25200, 8, 206) (25200,) 256Hz 10subjects 1session
+        # (25200, 8, 206) (25200,) 256Hz 10subjects 2520 trials * 1session
     elif dataset_name == 'EPFLP300':
         dataset = EPFLP300()
         paradigm = P300()
@@ -1002,14 +1014,16 @@ def dataset_to_file(dataset_name, data_save):
 if __name__ == '__main__':
     #dataset_name = 'BNCI2014001'
     #dataset_name = 'BNCI2014002'
+    #dataset_name = 'BNCI2014004'
+    dataset_name = 'BNCI2015001'
     #dataset_name = 'MI1'
     #dataset_name = 'BNCI2015004'
     #dataset_name = 'BNCI2014008'
-    dataset_name = 'BNCI2014009'
+    #dataset_name = 'BNCI2014009'
     #dataset_name = 'BNCI2015003'
     #dataset_name = 'EPFLP300'
-    #info = dataset_to_file(dataset_name)
-    #print(info)
+    info = dataset_to_file(dataset_name, data_save=False)
+    print(info)
 
     #data_folder = '/Users/Riccardo/Workspace/HUST-BCI/data/ERN'
     #dataset_ERN_to_file(data_folder)
@@ -1024,9 +1038,9 @@ if __name__ == '__main__':
     #dataset_DEAP_DE_to_file(data_folder, use_EA=True)
     #dataset_DEAP_DE_to_file(data_folder, use_EA=False)
 
-    data_folder = '/Users/Riccardo/Workspace/HUST-BCI/data/SEED-V/EEG_raw'
-    dataset_SEEDV_DE_to_file(data_folder, use_EA=True)
-    dataset_SEEDV_DE_to_file(data_folder, use_EA=False)
+    #data_folder = '/mnt/data2/sylyoung/EEG/SEED-V/SEED-V/EEG_raw/'
+    #dataset_SEEDV_DE_to_file(data_folder, use_EA=True)
+    #dataset_SEEDV_DE_to_file(data_folder, use_EA=False)
 
     #data_folder = '/Users/Riccardo/Workspace/HUST-BCI/data/SEED/SEED-V/EEG_DE_features'
     #dataset_SEEDV_extracted_process(data_folder=data_folder)
@@ -1040,9 +1054,6 @@ if __name__ == '__main__':
 
     #dataset_SEEDV_extracted_process('/Users/Riccardo/Workspace/HUST-BCI/data/SEED/SEED-V/EEG_DE_features')
     #dataset_SEEDV_extracted_process('/Users/Riccardo/Workspace/HUST-BCI/data/SEED/SEED-V/Eye_movement_features')
-
-
-
 
 
     '''

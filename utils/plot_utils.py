@@ -8,7 +8,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from mne.time_frequency import tfr_morlet, psd_multitaper, psd_welch
-#from moabb.datasets import BNCI2014001
+
+from moabb.datasets import BNCI2014001, BNCI2014002, BNCI2014008, BNCI2014009, BNCI2015003, BNCI2015004, EPFLP300, BNCI2014004, BNCI2015001
+from moabb.paradigms import MotorImagery, P300
 
 def plot_eeg(config):
 
@@ -35,7 +37,7 @@ def plot_eeg(config):
     print(info)
     print('#' * 20 + 'info str end' + '#' * 20)
     print('data.shape:', data.shape)
-    print(data[:5, :5])
+    #print(data[:5, :5])
 
     assert len(data.shape) == 2, 'Wrong data dimension! Please do not include more than 1 trial in data!'
     if data.shape[0] > 100:
@@ -69,17 +71,34 @@ def plot_eeg(config):
     '''
 
 
+def plot_mne_eeg():
+    dataset = BNCI2015001()
+    paradigm = MotorImagery(n_classes=2)
+    print('preparing data...')
+    X, labels, meta = paradigm.get_data(dataset=dataset, subjects=dataset.subject_list[:])
+    ar_unique, cnts = np.unique(labels, return_counts=True)
+    print("labels:", ar_unique)
+    print("Counts:", cnts)
+
+    X_with_info, _, _ = paradigm.get_data(dataset=dataset, subjects=dataset.subject_list[:], return_epochs=True)
+    raw = mne.io.RawArray(X[0], X_with_info.info)
+    raw.plot(duration=5, n_channels=22, block=True, scalings=dict(eeg=20), highpass=0.3, lowpass=50, show=True)
+    plt.savefig('./results/figures/plot.png')
+
+
 if __name__ == '__main__':
-
-
-    #mat_data_path = '/Users/Riccardo/Workspace/HUST-BCI/data/BNCI-001-2014/A01T.mat'
-    mat_data_path = '/Users/Riccardo/Workspace/HUST-BCI/data/SEED/Raw/1_20131027.mat'
+    '''
+    mat_data_path = '/Users/Riccardo/mne_data/MNE-bnci-data/database/data-sets/001-2014/A01T.mat'
+    #mat_data_path = '/Users/Riccardo/Workspace/HUST-BCI/data/SEED/Raw/1_20131027.mat'
 
     config = {}
     config['path'] = mat_data_path
-    config['x_name'] = 'djc_eeg1'
-    config['sampling_rate'] = 1000
-    config['ch_names'] = ['FP1', 'FPZ', 'FP2', 'AF3', 'AF4', 'F7', 'F5', 'F3', 'F1', 'FZ', 'F2', 'F4', 'F6', 'F8', 'FT7', 'FC5', 'FC3', 'FC1', 'FCZ', 'FC2', 'FC4', 'FC6', 'FT8', 'T7', 'C5', 'C3', 'C1', 'CZ', 'C2', 'C4', 'C6', 'T8', 'TP7', 'CP5', 'CP3', 'CP1', 'CPZ', 'CP2', 'CP4', 'CP6', 'TP8', 'P7', 'P5', 'P3', 'P1', 'PZ', 'P2', 'P4', 'P6', 'P8', 'PO7', 'PO5', 'PO3', 'POZ', 'PO4', 'PO6', 'PO8', 'CB1', 'O1', 'OZ', 'O2', 'CB2']
-    config['description'] = 'SEED dataset Subject 1'
+    config['x_name'] = 'data'
+    config['sampling_rate'] = 256
+    config['ch_names'] = ['Fz'] * 22
+    config['description'] = 'MI dataset Subject 1'
 
     plot_eeg(config)
+    '''
+
+    plot_mne_eeg()

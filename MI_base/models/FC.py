@@ -11,6 +11,40 @@ class FC(nn.Module):
         return x
 
 
+class FC_xy(nn.Module):
+    def __init__(self, nn_in, nn_out):
+        super(FC_xy, self).__init__()
+        self.fc = nn.Linear(nn_in, nn_out)
+
+    def forward(self, x):
+        y = self.fc(x)
+        return x, y
+
+
+class FC_cat(nn.Module):
+    def __init__(self, nn_in, nn_out):
+        super(FC_cat, self).__init__()
+        self.fc = nn.Linear(nn_in, nn_out)
+
+    def forward(self, x):
+        knowledge, data = x
+        x = torch.cat((knowledge, data), 1)
+        x = self.fc(x)
+        return x
+
+
+class FC_cat_xy(nn.Module):
+    def __init__(self, nn_in, nn_out):
+        super(FC_cat_xy, self).__init__()
+        self.fc = nn.Linear(nn_in, nn_out)
+
+    def forward(self, x):
+        knowledge, data = x
+        x = torch.cat((knowledge, data), 1)
+        y = self.fc(x)
+        return x, y
+
+
 class FC_ELU(nn.Module):
     def __init__(self, nn_in, nn_out, feature_num=None):
         super(FC_ELU, self).__init__()
@@ -67,16 +101,16 @@ class FC_2layer(nn.Module):
     def __init__(self, nn_in, nn_out, num_features=32):
         super(FC_2layer, self).__init__()
         self.fc1 = nn.Linear(nn_in, 32)
-        #self.bn = nn.BatchNorm1d(num_features=num_features)
+        self.bn = nn.BatchNorm1d(num_features=num_features)
         self.actv = nn.ELU()
-        #self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.1)
         self.fc2 = nn.Linear(32, nn_out)
 
 
     def forward(self, x):
         x = self.fc1(x)
-        #x = self.bn(x)
+        x = self.bn(x)
         x = self.actv(x)
-        #x = self.dropout(x)
+        x = self.dropout(x)
         x = self.fc2(x)
         return x
