@@ -1,17 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="lab_gpu" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="sylyoung@222.20.96.71:20022" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false">
     <option name="confirmBeforeUploading" value="false" />
     <serverData>
-      <paths name="lab_gpu">
+      <paths name="sylyoung@222.20.96.71:20022">
         <serverdata>
           <mappings>
-            <mapping deploy="/EEG" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/EEG" local="$PROJECT_DIR$" />
+            <mapping local="" />
           </mappings>
-          <excludedPaths>
-            <excludedPath local="true" path="$PROJECT_DIR$/data/data_mod" />
-            <excludedPath local="true" path="$PROJECT_DIR$/data/old" />
-          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>

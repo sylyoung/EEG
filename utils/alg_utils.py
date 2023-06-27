@@ -27,6 +27,27 @@ def EA(x):
         XEA[i] = np.dot(sqrtRefEA, x[i])
     return XEA
 
+
+def EA_online(x, R, sample_num):
+    """
+    Parameters
+    ----------
+    x : numpy array
+        sample of shape (num_channels, num_time_samples)
+    R : numpy array
+        current reference matrix (num_channels, num_channels)
+
+    Returns
+    ----------
+    refEA : numpy array
+        data of shape (num_channels, num_channels)
+    """
+
+    cov = np.cov(x)
+    refEA = (R * sample_num + cov) / (sample_num + 1)
+    return refEA
+
+
 def soft_cross_entropy_loss(input, target):
     logprobs = torch.nn.functional.log_softmax(input, dim=1)
     return -(target * logprobs).sum() / input.shape[0]
@@ -88,7 +109,6 @@ def cross_entropy_with_probs(
         raise ValueError("Keyword 'reduction' must be one of ['none', 'mean', 'sum']")
 
 
-
 def calc_distance_wave(data):
     """
     :param data: np array, 1-d array representing a wave
@@ -99,3 +119,6 @@ def calc_distance_wave(data):
         dist = np.sqrt(1 + np.square(data[i + 1] - data[i]))
         total_dist += dist
     return total_dist
+
+
+

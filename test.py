@@ -2,37 +2,102 @@ import torch
 import numpy as np
 import sys
 import pandas as pd
+import torch as tr
+import torch.nn as nn
+import scipy
+import numpy as np
+import torch as tr
+import torch.nn as nn
+import math
+import torch.nn.functional as F
+from torch.autograd import Function
+from typing import Optional, Sequence
+from torch.autograd import Variable
+import time
+from models.FC import FC
+from scipy.linalg import fractional_matrix_power
+
+
+def EA(x):
+    """
+    Parameters
+    ----------
+    x : numpy array
+        data of shape (num_samples, num_channels, num_time_samples)
+
+    Returns
+    ----------
+    XEA : numpy array
+        data of shape (num_samples, num_channels, num_time_samples)
+    """
+    cov = np.zeros((x.shape[0], x.shape[1], x.shape[1]))
+    for i in range(x.shape[0]):
+        cov[i] = np.cov(x[i])
+    refEA = np.mean(cov, 0)
+    sqrtRefEA = fractional_matrix_power(refEA, -0.5)
+    XEA = np.zeros(x.shape)
+    for i in range(x.shape[0]):
+        XEA[i] = np.dot(sqrtRefEA, x[i])
+    return XEA
+
+
+def EA_online(x, R, sample_num):
+    """
+    Parameters
+    ----------
+    x : numpy array
+        sample of shape (num_channels, num_time_samples)
+    R : numpy array
+        current reference matrix (num_channels, num_channels)
+
+    Returns
+    ----------
+    refEA : numpy array
+        data of shape (num_channels, num_channels)
+    """
+
+    cov = np.cov(x)
+    refEA = (R * sample_num + cov) / (sample_num + 1)
+    return refEA
+
+
+if __name__ == '__main__':
+
+    x = np.load('./data/BNCI2015003/X.npy')
+    print(x.shape)
+    print(x[0, 0])
+
+    print(np.average([82.639,52.778,95.139,70.833,51.389,75.694,62.5,93.056,82.639]))
+
+    '''
+    num_sources = 10
+    num_trials = 100
+    train_x = []
+    for i in range(num_sources):
+        source = np.random.rand(num_trials, 22, 256)
+        aligned = EA(source)
+        train_x.append(aligned)
+    train_x = np.concatenate(train_x)
+    print(train_x.shape)
+
+    num_test_trials = 50
+    test_sample_num = 0
+    test_batch_size = 8
+    test_batch = np.random.rand(test_batch_size, 22, 256)
+    R = 0
+    for test_id in range(num_test_trials):
+        test_trial = np.random.rand(22, 256)
+        R = EA_online(test_trial, R, test_sample_num)
+        test_sample_num += 1
+        test_batch_aligned = []
+        for i in range(test_batch_size):
+            test_batch_aligned.append(np.dot(R, test_batch[i]))
+
+            print(test_batch_aligned[i].shape)
+    '''
 
 
 
-x1 = np.load('x1.npy')
-x2 = np.load('x2.npy')
-
-print(x1.shape)
-print(x2.shape)
 
 
 
-'''
-a = np.array([[74.618,75.069,74.618,74.792,73.021]
-,[86.042,85.347,85.556,84.167,86.007]
-,[80.347,80.,79.583,78.75,79.514]
-,[84.583,83.889,84.479,85.764,84.965]
-,[88.125,86.875,87.708,87.708,87.674]
-,[80.278,81.528,80.486,80.903,79.653]
-,[75.069,77.847,76.389,76.701,76.875]
-,[73.889,74.41,73.576,73.021,74.583]
-,[88.09,87.639,89.097,88.16,88.16,]
-,[85.556,87.083,86.215,85.903,86.563]])
-
-
-print(a)
-
-scores_arr = a
-
-print('all scores', scores_arr)
-print('all avgs', np.average(scores_arr, 1).round(3))
-print('sbj stds', np.std(scores_arr, 1).round(3))
-print('all avg', np.average(np.average(scores_arr, 0)).round(3))
-print('all std', np.std(np.average(scores_arr, 0)).round(3))
-'''

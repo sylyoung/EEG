@@ -7,23 +7,17 @@ import moabb
 import mne
 import pickle
 
-from moabb.datasets import BNCI2014001, BNCI2014002, BNCI2014008, BNCI2014009, BNCI2015003, BNCI2015004, EPFLP300, BNCI2014004, BNCI2015001
-from moabb.paradigms import MotorImagery, P300
+from moabb.datasets import BNCI2014001, BNCI2014002, BNCI2014008, BNCI2014009, BNCI2015003, BNCI2015004, EPFLP300, BNCI2014004, BNCI2015001, PhysionetMI, Cho2017, Wang2016
+from moabb.paradigms import MotorImagery, P300, SSVEP
 from scipy.stats import differential_entropy
 from scipy.signal import stft
 from pykalman import KalmanFilter
 
+lib_path = os.path.abspath(os.path.join('..'))
+sys.path.append(lib_path)
 
-sys.path.append("/Users/Riccardo/Workspace/HUST-BCI/repos/EEG/aBCIcomp")
-
-try:
-    #from AlgorithmImplement.data_preprocess_feature_extractor import de_feature_extractor
-    from alg_utils import EA
-    from feature_utils import de_feature_extractor
-except:
-    #from aBCIcomp.AlgorithmImplement.data_preprocess_feature_extractor import de_feature_extractor
-    from utils.alg_utils import EA
-    from utils.feature_utils import de_feature_extractor
+from EEG.utils.alg_utils import EA
+from EEG.utils.feature_utils import de_feature_extractor
 
 
 def split_data(data, axis, times):
@@ -94,11 +88,42 @@ def data_loader_DEAP(data_folder):
     return data, labels
 
 
-def traintest_split_cross_subject(dataset, X, y, num_subjects, test_subject_id):
-    data_subjects = np.split(X, indices_or_sections=num_subjects, axis=0)
-    labels_subjects = np.split(y, indices_or_sections=num_subjects, axis=0)
-    test_x = data_subjects.pop(test_subject_id)
-    test_y = labels_subjects.pop(test_subject_id)
+def traintest_split_cross_subject(dataset, X, y, num_subjects, test_subject_id, trial_num_arr=None):
+    if trial_num_arr is None:
+        X = np.split(X, indices_or_sections=num_subjects, axis=0)
+        y = np.split(y, indices_or_sections=num_subjects, axis=0)
+        test_x = X.pop(test_subject_id)
+        test_y = y.pop(test_subject_id)
+        train_x = np.concatenate(X, axis=0)
+        train_y = np.concatenate(y, axis=0)
+    else:
+        X_c = X.copy()
+        y_c = y.copy()
+        test_x = X_c.pop(test_subject_id)
+        test_y = y_c.pop(test_subject_id)
+        train_x = np.concatenate(X_c, axis=0)
+        train_y = np.concatenate(y_c, axis=0)
+
+    print('Test subject s' + str(test_subject_id))
+    print('Training/Test split:', train_x.shape, test_x.shape)
+    return train_x, train_y, test_x, test_y
+
+
+def traintest_split_cross_subject_uneven_multiple(dataset, X, y, num_subjects, test_subject_id, trial_num_arr):
+    data_subjects = []
+    labels_subjects = []
+    for i in range(num_subjects):
+        for j in range(len(trial_num_arr[0])):
+            data_subjects.append(X[int(np.sum(trial_num_arr[:i])) + int(np.sum(trial_num_arr[i, :j])):np.sum(trial_num_arr[:i]) + int(np.sum(trial_num_arr[i, :j+1]))])
+            labels_subjects.append(y[int(np.sum(trial_num_arr[:i])) + int(np.sum(trial_num_arr[i, :j])):np.sum(trial_num_arr[:i]) + int(np.sum(trial_num_arr[i, :j+1]))])
+
+    test_x = []
+    test_y = []
+    for j in range(len(trial_num_arr[0])):
+        test_x.append(data_subjects.pop(test_subject_id * len(trial_num_arr[0])))
+        test_y.append(labels_subjects.pop(test_subject_id * len(trial_num_arr[0])))
+    test_x = np.concatenate(test_x, axis=0)
+    test_y = np.concatenate(test_y, axis=0)
     train_x = np.concatenate(data_subjects, axis=0)
     train_y = np.concatenate(labels_subjects, axis=0)
     print('Test subject s' + str(test_subject_id))
@@ -924,6 +949,49 @@ def feature_smooth_moving_average(X, ma_window, subject_num, session_num, trial_
     return data_smoothed
 
 
+def process_seizure_data(dataset_name):
+    if dataset_name == 'NICU':
+        path = '/mnt/data2/sylyoung/EEG/Seizure/NICU/'
+        sample_rate = 500
+    elif dataset_name == 'CHSZ':
+        path = '/mnt/data2/sylyoung/EEG/Seizure/CHSZ/'
+        sample_rate = 256
+
+    def sort_func(name_string):
+        if 'DS_Store' in name_string:
+            return -1
+        if name_string.endswith('.mat'):
+            id_ = name_string[15:-4]
+        return int(id_)
+
+    file_arr = []
+    for subdir, dirs, files in os.walk(path):
+        for file in sorted(files, key=sort_func):
+            f_path = os.path.join(subdir, file)
+            if 'DS_Store' in f_path:
+                continue
+            file_arr.append(f_path)
+
+    data = []
+    labels = []
+    for file in file_arr:
+        mat = sio.loadmat(file)
+        print(file)
+        X = np.array(mat['X'])
+        X = np.transpose(X, (0, 2, 1))
+        y = np.array(mat['y']).reshape(-1, )
+
+        if X.shape[-1] == 4000 and dataset_name == 'CHSZ':
+            print('downsample...')
+            X = mne.filter.resample(X, down=2)
+
+        print(X.shape, y.shape)
+        data.append(X)
+        labels.append(y)
+
+    return data, labels, sample_rate
+
+
 def test():
     X = np.load('./data/' + 'SEED' + '/X_DE_session1.npy')
     labels = np.load('./data/' + 'SEED' + '/labels_session1.npy')
@@ -957,6 +1025,17 @@ def dataset_to_file(dataset_name, data_save):
         dataset = BNCI2015001()
         paradigm = MotorImagery(n_classes=2)
         # (5600, 13, 2561) (5600,) 512Hz 12subjects * 2 classes * (200 + 200 + (200 for Subj 8/9/10/11)) trials * (2/3)sessions
+    elif dataset_name == 'PhysionetMI':
+        dataset = PhysionetMI(imagined=True, executed=False)
+        paradigm = MotorImagery(n_classes=2)
+        #
+    elif dataset_name == 'Cho2017':
+        dataset = Cho2017()
+        paradigm = MotorImagery(n_classes=2)
+        #
+    elif dataset_name == 'Wang2016':
+        dataset = Wang2016()
+        paradigm = SSVEP()
     elif dataset_name == 'MI1':
         info = None
         return info
@@ -994,7 +1073,14 @@ def dataset_to_file(dataset_name, data_save):
 
     if data_save:
         print('preparing data...')
-        X, labels, meta = paradigm.get_data(dataset=dataset, subjects=dataset.subject_list[:])
+        # dataset.subject_list[:5] or [dataset.subject_list[0]]
+        # PhysionetMI 87,91,99 with different time_samples; 103 with different num_trials
+        if dataset_name == 'PhysionetMI':
+            #print(type(dataset.subject_list[:]))
+            #print(list(type(np.delete(dataset.subject_list, [87,91,99,103])))
+            X, labels, meta = paradigm.get_data(dataset=dataset, subjects=list(np.delete(dataset.subject_list, [87,91,99,103,104])))
+        else:
+            X, labels, meta = paradigm.get_data(dataset=dataset, subjects=dataset.subject_list[:])
         ar_unique, cnts = np.unique(labels, return_counts=True)
         print("labels:", ar_unique)
         print("Counts:", cnts)
@@ -1004,10 +1090,10 @@ def dataset_to_file(dataset_name, data_save):
         meta.to_csv('./data/' + dataset_name + '/meta.csv')
     else:
         if isinstance(paradigm, MotorImagery):
-            X, labels, meta = paradigm.get_data(dataset=dataset, subjects=dataset.subject_list[:], return_epochs=True)
+            X, labels, meta = paradigm.get_data(dataset=dataset, subjects=[dataset.subject_list[0]], return_epochs=True)
             return X.info
         elif isinstance(paradigm, P300):
-            X, labels, meta = paradigm.get_data(dataset=dataset, subjects=dataset.subject_list[:], return_epochs=True)
+            X, labels, meta = paradigm.get_data(dataset=dataset, subjects=[dataset.subject_list[0]], return_epochs=True)
             return X.info
 
 
@@ -1015,15 +1101,21 @@ if __name__ == '__main__':
     #dataset_name = 'BNCI2014001'
     #dataset_name = 'BNCI2014002'
     #dataset_name = 'BNCI2014004'
-    dataset_name = 'BNCI2015001'
+    #dataset_name = 'BNCI2015001'
+    #dataset_name = 'PhysionetMI'
     #dataset_name = 'MI1'
     #dataset_name = 'BNCI2015004'
     #dataset_name = 'BNCI2014008'
     #dataset_name = 'BNCI2014009'
     #dataset_name = 'BNCI2015003'
     #dataset_name = 'EPFLP300'
-    info = dataset_to_file(dataset_name, data_save=False)
+    #dataset_name = 'Cho2017'
+    dataset_name = 'Wang2016'
+    info = dataset_to_file(dataset_name, data_save=True)
+    print(dataset_name)
     print(info)
+
+    #process_seizure_data('CHSZ')
 
     #data_folder = '/Users/Riccardo/Workspace/HUST-BCI/data/ERN'
     #dataset_ERN_to_file(data_folder)
@@ -1086,6 +1178,66 @@ if __name__ == '__main__':
      sfreq: 512.0 Hz
     >
     
+    BNCI2014004
+    <Info | 8 non-empty values
+     bads: []
+     ch_names: C3, Cz, C4
+     chs: 3 EEG
+     custom_ref_applied: False
+     dig: 6 items (3 Cardinal, 3 EEG)
+     highpass: 8.0 Hz
+     lowpass: 32.0 Hz
+     meas_date: unspecified
+     nchan: 3
+     projs: []
+     sfreq: 250.0 Hz
+    >
+    
+    BNCI2015001
+    <Info | 8 non-empty values
+     bads: []
+     ch_names: FC3, FCz, FC4, C5, C3, C1, Cz, C2, C4, C6, CP3, CPz, CP4
+     chs: 13 EEG
+     custom_ref_applied: False
+     dig: 16 items (3 Cardinal, 13 EEG)
+     highpass: 8.0 Hz
+     lowpass: 32.0 Hz
+     meas_date: unspecified
+     nchan: 13
+     projs: []
+     sfreq: 512.0 Hz
+    >
+    
+    PhysionetMI
+    <Info | 8 non-empty values
+     bads: []
+     ch_names: FC5, FC3, FC1, FCz, FC2, FC4, FC6, C5, C3, C1, Cz, C2, C4, C6, ...
+     chs: 64 EEG
+     custom_ref_applied: False
+     dig: 67 items (3 Cardinal, 64 EEG)
+     highpass: 8.0 Hz
+     lowpass: 32.0 Hz
+     meas_date: 2009-08-12 16:15:00 UTC
+     nchan: 64
+     projs: []
+     sfreq: 160.0 Hz
+    >
+    
+    Cho2017
+    <Info | 8 non-empty values
+     bads: []
+     ch_names: Fp1, AF7, AF3, F1, F3, F5, F7, FT7, FC5, FC3, FC1, C1, C3, C5, ...
+     chs: 64 EEG
+     custom_ref_applied: False
+     dig: 67 items (3 Cardinal, 64 EEG)
+     highpass: 8.0 Hz
+     lowpass: 32.0 Hz
+     meas_date: unspecified
+     nchan: 64
+     projs: []
+     sfreq: 512.0 Hz
+    >
+
     BNCI2015004
     <Info | 8 non-empty values
      bads: []
@@ -1145,4 +1297,5 @@ if __name__ == '__main__':
      projs: []
      sfreq: 256.0 Hz
     >
+
     '''
