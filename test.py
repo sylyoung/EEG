@@ -14,8 +14,10 @@ from torch.autograd import Function
 from typing import Optional, Sequence
 from torch.autograd import Variable
 import time
+from flopth import flopth
 from models.FC import FC
 from scipy.linalg import fractional_matrix_power
+from models.EEGNet import EEGNet
 
 
 def EA(x):
@@ -63,41 +65,63 @@ def EA_online(x, R, sample_num):
 
 if __name__ == '__main__':
 
-    x = np.load('./data/BNCI2015003/X.npy')
-    print(x.shape)
-    print(x[0, 0])
 
-    print(np.average([82.639,52.778,95.139,70.833,51.389,75.694,62.5,93.056,82.639]))
+    a = [[1, 1, 0], [0, 0, 2], [0, 0, -1]]
+    print(np.exp(a))
 
-    '''
-    num_sources = 10
-    num_trials = 100
-    train_x = []
-    for i in range(num_sources):
-        source = np.random.rand(num_trials, 22, 256)
-        aligned = EA(source)
-        train_x.append(aligned)
-    train_x = np.concatenate(train_x)
-    print(train_x.shape)
 
-    num_test_trials = 50
-    test_sample_num = 0
-    test_batch_size = 8
-    test_batch = np.random.rand(test_batch_size, 22, 256)
+
     R = 0
-    for test_id in range(num_test_trials):
-        test_trial = np.random.rand(22, 256)
-        R = EA_online(test_trial, R, test_sample_num)
-        test_sample_num += 1
-        test_batch_aligned = []
-        for i in range(test_batch_size):
-            test_batch_aligned.append(np.dot(R, test_batch[i]))
-
-            print(test_batch_aligned[i].shape)
-    '''
 
 
 
+    def EA_online(x, R, sample_num):
+        """
+        Parameters
+        ----------
+        x : numpy array
+            sample of shape (num_channels, num_time_samples)
+        R : numpy array
+            current reference matrix (num_channels, num_channels)
+
+        Returns
+        ----------
+        refEA : numpy array
+            data of shape (num_channels, num_channels)
+        """
+        cov = np.cov(x)
+        refEA = (R * sample_num + cov) / (sample_num + 1)
+        return refEA
+    for i in range(5):
+        start_time = time.time()
+
+        inputs = torch.randn(13, 2561)
+        R = EA_online(inputs, R, i)
+        sqrtRefEA = fractional_matrix_power(R, -0.5)
+        inputs = np.dot(sqrtRefEA, inputs)
+
+    EA_time = time.time()
+    print('EA finished in ms:', np.round((EA_time - start_time) * 1000, 3))
+
+    # declare Model object
+    my_model = EEGNet(n_classes=2,
+                       Chans=22,
+                       Samples=1001,
+                       kernLenght=125,
+                       F1=4,
+                       D=2,
+                       F2=8,
+                       dropoutRate=0.25,
+                       norm_rate=0.5)
+
+    # Use input size
+    flops, params = flopth(my_model, in_size=((1, 22, 1001),))
+    print(flops, params)
+
+    # Or use input tensors
+    dummy_inputs = torch.rand(8, 1, 22, 1001)
+    flops, params = flopth(my_model, inputs=(dummy_inputs,))
+    print(flops, params)
 
 
 

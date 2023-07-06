@@ -16,8 +16,10 @@ from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, roc_auc_score, f1_score
 from sklearn.metrics.pairwise import cosine_similarity
+from mne.decoding import CSP
 from torch.utils.data import TensorDataset, DataLoader
 from xgboost import XGBClassifier
 from imxgboost.imbalance_xgb import imbalance_xgboost as imb_xgb
@@ -32,7 +34,7 @@ from EEG.models.EEGWaveNet import EEGWaveNet
 from EEG.models.FC import FC
 from EEG.models.RBM import RBM
 from EEG.ml.nn_baseline import nn_fixepoch, nn_fixepoch_siamesefusion, nn_fixepoch_SFN, nn_cotrain, nn_fixepoch_ms
-from EEG.utils.alg_utils import EA
+from EEG.utils.alg_utils import EA, LA
 from EEG.utils.data_utils import traintest_split_cross_subject, traintest_split_cross_subject_uneven_multiple, dataset_to_file, time_cut, process_seizure_data
 from EEG.models.CNN import ConvFeatureChannel, ConvChannelWise
 from EEG.models.BEEGNet import BEEGNet
@@ -607,6 +609,8 @@ def ml_classifier(approach, output_probability, train_x, train_y, test_x, return
         clf = AdaBoostClassifier()
     elif approach == 'GradientBoosting':
         clf = GradientBoostingClassifier()
+    elif approach == 'SVM':
+        clf = SVC()
     elif approach == 'xgb':
         clf = XGBClassifier()
         if weight:
@@ -1090,6 +1094,20 @@ def eeg_ml(dataset, info, align, approach, cuda_device_id, percentage=None):
         else:
             train_x, train_y, test_x, test_y = traintest_split_cross_subject(dataset, X, y, num_subjects, i)
 
+        #valid_x = test_x[:20]
+        #valid_y = test_y[:20]
+        #test_x = test_x[20:]
+        #test_y = test_y[20:]
+        #train_x, train_y = LA(train_x, train_y, valid_x, valid_y)
+        num_trial = len(test_y)
+        train_x_subjs, train_y_subjs = [], []
+        for k in range(num_subjects - 1):
+            train_x_subj, train_y_subj = LA(train_x[num_trial * k:num_trial * (k + 1)], train_y[num_trial * k:num_trial * (k + 1)], test_x, test_y)
+            train_x_subjs.append(train_x_subj)
+            train_y_subjs.append(train_y_subj)
+        train_x = np.concatenate(train_x_subjs)
+        train_y = np.concatenate(train_y_subjs)
+
         '''
         # DeepInversion
         print('retrieving DeepInversion data...')
@@ -1154,8 +1172,9 @@ def eeg_ml(dataset, info, align, approach, cuda_device_id, percentage=None):
             # CSP
             csp = CSP(n_components=10)
             train_x_csp = csp.fit_transform(train_x, train_y)
+            test_x_csp = csp.transform(test_x)
 
-
+            '''
             # training data cleaning with nearest neighbors
             dist_mat = np.zeros((len(train_x_csp), len(train_x_csp)))
             for i1 in range(len(train_x_csp)):
@@ -1170,8 +1189,8 @@ def eeg_ml(dataset, info, align, approach, cuda_device_id, percentage=None):
                 if neighbor_labels.count(neighbor_labels[0]) == len(neighbor_labels) and neighbor_labels[0] != train_y[ik]:
                     marked_inds.append(ik)
                     modified_labels.append(neighbor_labels[0])
-
-
+            '''
+            '''
             # GE
             k = 10
             k_prime = 8
@@ -1187,7 +1206,7 @@ def eeg_ml(dataset, info, align, approach, cuda_device_id, percentage=None):
 
             train_x = np.array(train_x[retained_inds])
             train_y = np.array(retained_labels)
-
+            '''
             '''
             # data removal
             print('data removing...')
@@ -1203,11 +1222,12 @@ def eeg_ml(dataset, info, align, approach, cuda_device_id, percentage=None):
             '''
             print('train_x, train_y, test_x, test_y.shape', train_x.shape, train_y.shape, test_x.shape, test_y.shape)
 
+            '''
             # refitting CSP
             print('refitting')
             csp = CSP(n_components=10)
             train_x_csp = csp.fit_transform(train_x, train_y)
-
+            '''
 
             test_x_csp = csp.transform(test_x)
             '''
@@ -3128,8 +3148,8 @@ if __name__ == '__main__':
     for dataset in dataset_arr:
         #for percentage in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
         #for percentage in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]:
-        #for approach in ['LDA']:##'CE_stSENet']:# 'EEGWaveNet']:#, 'EEGNet']:
-        for approach in ['EEGNet']:
+        for approach in ['LDA']:##'CE_stSENet']:# 'EEGWaveNet']:#, 'EEGNet']:
+        #for approach in ['EEGNet']:
         #for approach in ['BEEGNet']:
             all_scores = []
             align = False
@@ -3151,8 +3171,8 @@ if __name__ == '__main__':
             #info = None
 
             # eeg_handfeature(dataset, info, align, approach, cuda_device_id)
-            #eeg_ml(dataset, info, align, approach, cuda_device_id)
-            eeg_dnn(dataset, info, align, approach, cuda_device_id)
+            eeg_ml(dataset, info, align, approach, cuda_device_id)
+            #eeg_dnn(dataset, info, align, approach, cuda_device_id)
             #eeg_ml(dataset, info, align, approach, cuda_device_id, percentage)
             #eeg_dnn(dataset, info, align, approach, cuda_device_id, percentage)
             # eeg_dnn_ms(dataset, info, align, approach, cuda_device_id)

@@ -98,6 +98,11 @@ def plot_mne_eeg():
 
 
 def plot_ensemble_results():
+    csfont = {'fontname': "Times New Roman"}
+    font1 = {'family': 'Times New Roman',
+             'weight': 'normal',
+             'size': 18,
+             }
     data_name_arr = ['BNCI2014001', 'BNCI2014002', 'BNCI2015001']
 
     # rerun
@@ -234,17 +239,17 @@ def plot_ensemble_results():
         #x = np.arange(9).astype(int) + 2
         x = np.arange(8).astype(int) + 3
 
-        plt.plot(x, y1, color='brown', marker='x', markersize=4, alpha=0.7, lw=2, label='Averaging')
-        plt.plot(x, y2, color='green', marker='o', markersize=4, alpha=0.7, lw=2, label='Voting')
-        plt.plot(x, y3, color='steelblue', marker='v', markersize=4, alpha=0.7, lw=2, label='SML-hard')
-        plt.plot(x, y4, color='red', marker='^', markersize=4, alpha=0.7, lw=2, label='SML-soft')
+        plt.plot(x, y1, color='black', marker='*', linestyle='dotted', markersize=6, alpha=0.7, lw=2, label='Averaging')
+        plt.plot(x, y2, color='blue', marker='o', linestyle='dashed', markersize=4, alpha=0.7, lw=2, label='Voting')
+        plt.plot(x, y3, color='green', marker='v', linestyle='dashdot', markersize=4, alpha=0.7, lw=2, label='SML-hard')
+        plt.plot(x, y4, color='red', marker='^', linestyle='solid', markersize=4, alpha=0.7, lw=2, label='SML-soft')
         #plt.plot(x, y5, color='yellow', marker='>', markersize=4, alpha=0.7, lw=2, label='SML-hard w/ training-set')
         #plt.plot(x, y6, color='black', marker='<', markersize=4, alpha=0.7, lw=2, label='SML-soft w/ training-set')
 
         plt.grid(axis='y', color='grey', linestyle='--', lw=1, alpha=0.5)
-        plt.legend(loc="lower right", fontsize=13)
-        plt.xlabel("Number of ensembled models", fontsize=13)
-        plt.ylabel("Accuracy", fontsize=13)
+        plt.legend(loc="lower right", fontsize=18, prop=font1)
+        plt.xlabel("$M$, number of EEGNet models", fontsize=18, **csfont)
+        plt.ylabel("Classification accuracy (%)", fontsize=18, **csfont)
         plt.tight_layout()
 
         plt.savefig('./results/figures/ensemble_' + data_name_arr[i] + '.pdf', format='pdf')
@@ -253,6 +258,11 @@ def plot_ensemble_results():
 
 
 def plot_ensemble_multiclass_results():
+    csfont = {'fontname': "Times New Roman"}
+    font1 = {'family': 'Times New Roman',
+             'weight': 'normal',
+             'size': 18,
+             }
     data_name_arr = ['BNCI2014001-4c']
 
     # BNCI2014001-4c
@@ -272,18 +282,18 @@ def plot_ensemble_multiclass_results():
         #x = np.arange(9).astype(int) + 2
         x = np.arange(8).astype(int) + 3
 
-        plt.plot(x, y1, color='brown', marker='x', markersize=4, alpha=0.7, lw=2, label='Averaging')
-        plt.plot(x, y2, color='green', marker='o', markersize=4, alpha=0.7, lw=2, label='Voting')
-        plt.plot(x, y4, color='red', marker='^', markersize=4, alpha=0.7, lw=2, label='SML-soft')
+        plt.plot(x, y1, color='black', marker='*', linestyle='dotted', markersize=6, alpha=0.7, lw=2, label='Averaging')
+        plt.plot(x, y2, color='blue', marker='o', linestyle='dashed', markersize=4, alpha=0.7, lw=2, label='Voting')
+        plt.plot(x, y4, color='red', marker='^', linestyle='solid', markersize=4, alpha=0.7, lw=2, label='SML-soft')
 
         plt.grid(axis='y', color='grey', linestyle='--', lw=1, alpha=0.5)
-        plt.legend(loc="lower right", fontsize=13)
-        plt.xlabel("Number of ensembled models", fontsize=13)
-        plt.ylabel("Accuracy", fontsize=13)
+        plt.legend(loc="lower center", fontsize=18, prop=font1)
+        plt.xlabel("$M$, number of EEGNet models", fontsize=18, **csfont)
+        plt.ylabel("Classification accuracy (%)", fontsize=18, **csfont)
         plt.tight_layout()
 
-        plt.savefig('./results/figures/ensemble_multiclass_' + 'ensemble_multiclass_' + data_name_arr[i] + '.pdf', format='pdf')
-        plt.savefig('./results/figures/ensemble_multiclass_' + 'ensemble_multiclass_' + data_name_arr[i] + '.png', format='png')
+        plt.savefig('./results/figures/ensemble_multiclass_' + data_name_arr[i] + '.pdf', format='pdf')
+        plt.savefig('./results/figures/ensemble_multiclass_' + data_name_arr[i] + '.png', format='png')
         plt.clf()
 
 
@@ -408,6 +418,72 @@ def plot_line_graph_GE():
 
     # plt.savefig('./results/figures/ensemble_multiclass_' + 'ensemble_multiclass_' + data_name_arr[i] + '.pdf', format='pdf')
     plt.savefig('./results/figures/data_quality_GE_MI.png', format='png')
+    plt.clf()
+
+
+def plot_line_graph_parameter_sensitivity():
+    csfont = {'fontname': "Times New Roman"}
+    font1 = {'family': 'Times New Roman',
+             'weight': 'normal',
+             'size': 30,
+             }
+
+    #data_name_arr = ['BNCI2014001-imbalanced', 'BNCI2014002', 'BNCI2015001']
+    data_name_arr = ['BNCI2014001-imbalanced', 'BNCI2014002-imbalanced', 'BNCI2015001-imbalanced']
+    markers = ['v', 'o', 'D']
+    linestyles = ['-', '--', '-.']
+
+    plt.style.use('seaborn-whitegrid')
+    palette = plt.get_cmap('Set1')
+
+    fig = plt.figure(figsize=(12, 8))
+    iters = list(range(4))  # 5
+
+    #ylabels = ['Classification accuracy (%)']
+    ylabels = ['Classification AUC (%)']
+    #xticks = [1, 2, 3, 4, 5]
+    xticks = [0.6, 0.7, 0.8, 0.9]
+    '''
+    avgs = [[75.90, 76.44, 76.1 , 76.08, 75.88],
+       [77.43, 78.26, 78.76, 78.96, 79.06],
+       [77.27, 77.75, 78.03, 78.01, 78.03]]
+
+    stds = [[0.87, 0.55, 0.66, 0.57, 0.36],
+       [0.25, 0.5 , 0.28, 0.28, 0.42],
+       [1.47, 0.67, 0.83, 0.89, 0.88]]
+    '''
+    avgs = [[81.32, 81.65, 81.59, 80.58],
+       [84.98, 85.28, 85.20, 84.79],
+       [83.88, 84.02, 83.90, 83.19]]
+
+    stds = [[1.34, 1.39, 1.56, 1.78],
+       [1.15, 1.04, 1.33, 1.99],
+       [1.37, 1.17, 1.26, 1.79]]
+
+    for i in range(len(avgs)):
+        color = palette(i)  # 数据集i颜色
+        avg = np.array(avgs[i])
+        std = np.array(stds[i])
+        r1 = list(map(lambda x: x[0] - x[1], zip(avg, std)))  # 上方差
+        r2 = list(map(lambda x: x[0] + x[1], zip(avg, std)))  # 下方差
+        plt.plot(iters, avg, color=color, label=data_name_arr[i], linewidth=4.0, marker=markers[i], linestyle=linestyles[i], markersize=12)
+        plt.fill_between(iters, r1, r2, color=color, alpha=0.2)
+
+    plt.xticks(ticks=range(len(xticks)), labels=xticks, fontsize=22, **csfont)
+    plt.grid(axis='y', color='grey', linestyle='--', lw=1, alpha=0.5)
+    #plt.set_xticklabels(labels=xticks, fontsize=22)
+
+    #plt.ylim(73.0, 80.0)
+    #plt.yticks([73.0, 74.0, 75.0, 76.0, 77.0, 78.0, 79.0, 80.0], fontsize=22, **csfont)
+    plt.ylim(77.0, 87.0)
+    plt.yticks([77.0, 78.0, 79.0, 80.0, 81.0, 82.0, 83.0, 84.0, 85.0, 86.0, 87.0], fontsize=22, **csfont)
+
+    plt.legend(loc='lower center', fontsize=30, prop=font1)
+    plt.xlabel('$τ$', fontsize=30, **csfont)  # T
+    plt.ylabel(ylabels[0], fontsize=30, **csfont)
+    fig.tight_layout()
+    fig.show()
+    plt.savefig('./results/figures/sensitivity-tau.png', format='png')  # T
     plt.clf()
 
 
@@ -566,14 +642,16 @@ if __name__ == '__main__':
 
     #plot_mne_eeg()
 
-    #plot_ensemble_results()
-    #plot_ensemble_multiclass_results()
-
     #plot_line_graph_data_quantity()
     #plot_line_graph_data_quantity_within()
     #plot_line_graph_GE()
-
+    '''
     for dataset in ['BNCI2014001', 'BNCI2014002', 'BNCI2015001']:
     #for dataset in ['BNCI2014008', 'BNCI2014009', 'BNCI2015003']:
         for align in [True, False]:
             plot_tsne_classes(dataset=dataset, align=align)
+    '''
+
+    plot_ensemble_results()
+    plot_ensemble_multiclass_results()
+    plot_line_graph_parameter_sensitivity()

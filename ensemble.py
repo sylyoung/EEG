@@ -334,7 +334,7 @@ def binary_classification():
         print(all_avg)
         '''
 
-        for ens_num in range(2, 11):
+        for ens_num in range(10, 11):
 
             print('Ensembling of ' + str(ens_num) + ' models...')
 

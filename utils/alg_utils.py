@@ -5,6 +5,103 @@ import torch.nn.functional as F
 from scipy.linalg import fractional_matrix_power
 
 
+def log_euclid_mean(X):
+    """
+    Log-Euclidean mean https://github.com/alexandrebarachant/covariancetoolbox/blob/master/lib/mean/logeuclid_mean.m
+    Parameters
+    ----------
+    X : numpy array
+        data of shape (num_samples, num_channels, num_channels)
+
+    Returns
+    ----------
+    cov : numpy array
+        data of shape (num_channels, num_channels)
+    """
+
+    K = X.shape[0]
+    fc = np.zeros((X.shape[1], X.shape[1]))
+    for i in range(K):
+        positive_array = np.clip(X[i], 1, None)  # TODO
+        logvalue = np.log(positive_array)
+        fc += logvalue
+    cov = np.exp(fc / K)
+    return cov
+
+
+def LA(Xs, Ys, Xt, Yt):
+    """
+    Label Alignment
+    Parameters
+    ----------
+    Xs : numpy array
+        data of shape (num_samples, num_channels, num_time_samples)
+    Xt : numpy array
+        data of shape (num_samples, num_channels, num_time_samples)
+    Ys : numpy array, label of 0, 1, ... (int)
+        data of shape (num_samples, )
+    Yt : numpy array, label of 0, 1, ... (int)
+        data of shape (num_samples, )
+
+    Returns
+    ----------
+    XLA : numpy array
+        data of shape (num_samples, num_channels, num_time_samples)
+    YLA : numpy array
+        data of shape (num_samples, )
+    """
+
+    assert Xs.shape[1] == Xt.shape[1], print('LA Error, channel mismatch!')
+    assert Xs.shape[2] == Xt.shape[2], print('LA Error, time sample mismatch!')
+    label_space_s, cnts_class_s = np.unique(Ys, return_counts=True)
+    label_space_t, cnts_class_t = np.unique(Yt, return_counts=True)
+    assert len(label_space_s) == len(label_space_t), print('LA Error, label space mismatch!')
+    num_classes = len(label_space_s)
+
+    Xs_by_labels = []
+    Xt_by_labels = []
+    for c in range(num_classes):
+        inds_class = np.where(Ys == c)[0]
+        Xs_by_labels.append(Xs[inds_class])
+        inds_class = np.where(Yt == c)[0]
+        Xt_by_labels.append(Xt[inds_class])
+
+    covxs = []
+    covxt = []
+
+    for c in range(num_classes):
+        covxs.append(np.zeros((cnts_class_s[c], Xs.shape[1], Xs.shape[1])))
+        covxt.append(np.zeros((cnts_class_t[c], Xt.shape[1], Xt.shape[1])))
+
+    XLA = []
+    YLA = []
+
+    for c in range(num_classes):
+        for i in range(len(covxs[c])):
+            covxs[c][i] = np.cov(Xs_by_labels[c][i])
+        for i in range(len(covxt[c])):
+            covxt[c][i] = np.cov(Xt_by_labels[c][i])
+
+        #covxs_class = log_euclid_mean(covxs[c]) # TODO log-euclid mean negative values due to non-symmetric positive definite cov matrix
+        covxs_class = np.mean(covxs[c], axis=0)
+        sqrtCs = fractional_matrix_power(covxs_class, -0.5)
+        #covxt_class = log_euclid_mean(covxt[c])
+        covxt_class = np.mean(covxt[c], axis=0)
+        sqrtCt = fractional_matrix_power(covxt_class, 0.5)
+        A = np.dot(sqrtCt, sqrtCs)
+        for i in range(len(Xs_by_labels[c])):
+            XLA.append(np.dot(A, Xs_by_labels[c][i]))
+            YLA.append(c)
+
+    XLA = np.array(XLA)
+    YLA = np.array(YLA).reshape(-1,)
+    assert XLA.shape == Xs.shape, print('LA Error, X shape problem!')
+    assert YLA.shape == Ys.shape, print('LA Error, Y shape problem!')
+    assert np.unique(YLA, return_counts=True)[1][0] == cnts_class_s[0], print('LA Error, labels problem!')
+
+    return XLA, YLA
+
+
 def EA(x):
     """
     Parameters
@@ -36,6 +133,8 @@ def EA_online(x, R, sample_num):
         sample of shape (num_channels, num_time_samples)
     R : numpy array
         current reference matrix (num_channels, num_channels)
+    sample_num: int
+        previous number of samples used to calculate R
 
     Returns
     ----------

@@ -752,18 +752,18 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
             data_cum = tr.cat((data_cum, inputs.float().cpu()), 0)
             labels_cum = tr.cat((labels_cum, labels.float().cpu()), 0)
 
-        start_time = time.time()
         if args.align:
+            #start_time = time.time()
             R = EA_online(inputs.reshape(args.chn, args.time_sample_num), R, i + 1)
             sqrtRefEA = fractional_matrix_power(R, -0.5)
             inputs = np.dot(sqrtRefEA, inputs)
+            #EA_time = time.time()
+            #print('sample ', str(i), ', EA finished time in ms:', np.round((EA_time - start_time) * 1000, 3))
             inputs = inputs.reshape(1, 1, args.chn, args.time_sample_num)
         else:
             inputs = data_cum[i].numpy()
             inputs = inputs.reshape(1, 1, inputs.shape[1], inputs.shape[2])
 
-        EA_time = time.time()
-        #print('sample ', str(i), ', EA finished time in ms:', np.round((EA_time - start_time) * 1000,3))
 
         if args.data_env != 'local':
             inputs = torch.from_numpy(inputs).to(torch.float32).cuda()
@@ -842,10 +842,10 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
             else:
                 results.append(0)
         '''
+        start_time = time.time()
         model.train()
         #if (i + 1) % args.test_batch == 0:  # accumulative
         if (i + 1) >= args.test_batch and (i + 1) % args.stride == 0:  # sliding
-
 
         #if False:
             if args.align:
@@ -855,15 +855,12 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
 
                 sqrtRefEA = fractional_matrix_power(R, -0.5)
                 inputs = data_cum[i-args.test_batch+1:i+1]
-                batch = []
-                for batch_i in range(args.test_batch):
-                    batch.append(np.dot(sqrtRefEA, inputs[batch_i]))
-                inputs = np.concatenate(batch)
+                inputs = np.dot(sqrtRefEA, inputs)
                 inputs = inputs.reshape(args.test_batch, 1, args.chn, args.time_sample_num)
             else:
                 inputs = data_cum[i-args.test_batch+1:i+1, :, :, :].numpy()
                 inputs = inputs.reshape(args.test_batch, 1, inputs.shape[2], inputs.shape[3])
-            start_time = time.time()
+
             """
             #if (i + 1) > args.test_batch:
             if len(c0_ids) >= args.test_batch // 2 and len(c1_ids) >= args.test_batch // 2:
@@ -924,6 +921,7 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
                 inputs = torch.from_numpy(inputs).to(torch.float32).cuda()
             else:
                 inputs = torch.from_numpy(inputs).to(torch.float32)
+
 
             for step in range(args.steps):
 
@@ -1016,6 +1014,7 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
                 softmax_out = nn.Softmax(dim=1)(outputs / args.t)
 
                 entropy_loss = tr.mean(Entropy(softmax_out))
+
                 msoftmax = softmax_out.mean(dim=0)
                 gentropy_loss = tr.sum(msoftmax * tr.log(msoftmax + args.epsilon))
 
@@ -1191,6 +1190,7 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
                 im_loss = entropy_loss + gentropy_loss
                 loss = im_loss
                 #loss = entropy_loss
+                #loss = gentropy_loss
                 #loss = classifier_loss
 
                 loss.backward()
@@ -1248,7 +1248,7 @@ def TTA(loader, model, args, balanced=True, flag=True, fc=None):
                 '''
             """
 
-        TTA_time = time.time()
+        #TTA_time = time.time()
         #print('sample ', str(i), ', TTA finished in ms:', np.round((TTA_time - start_time) * 1000, 3))
 
         '''

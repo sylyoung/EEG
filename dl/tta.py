@@ -180,7 +180,7 @@ if __name__ == '__main__':
         '''
 
         if paradigm == 'MI':
-            test_batch = 8  # 8 for 2classes, 16 for 4 classes
+            test_batch = 8  # 8 for 2 classes, 16 for 4 classes
         elif paradigm == 'ERP':
             test_batch = 64
 
@@ -188,13 +188,13 @@ if __name__ == '__main__':
 
         stride = 1
 
-        args = argparse.Namespace(feature_deep_dim=feature_deep_dim, lr=0.001, trial_num=trial_num,
+        args = argparse.Namespace(feature_deep_dim=feature_deep_dim, lr=0.05, trial_num=trial_num,
                                   time_sample_num=time_sample_num, sample_rate=sample_rate,
                                   N=N, chn=chn, class_num=class_num, smooth=0, paradigm=paradigm,
                                   test_batch=test_batch, steps=steps, data_name=data_name, stride=stride)
 
         args.data = data_name
-        args.method = 'abl-TTA-T-TIME-all'
+        args.method = 'abl-TTA-T-TIME-test'
         args.backbone = 'EEGNet'
         #args.backbone = 'ShallowCNN'
         #args.method = 'TTA-IM-ShallowCNN'
@@ -221,7 +221,8 @@ if __name__ == '__main__':
 
         total_acc = []
 
-        for s in [1, 2, 3, 4, 5]:
+        for s in [1]:
+        #for s in [1, 2, 3, 4, 5]:
         #for s in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]:
             args.SEED = s
 
